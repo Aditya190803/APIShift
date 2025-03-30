@@ -1,4 +1,4 @@
-name: Publish QuickScript Package
+name: Publish APIShift Package
 
 on:
   push:
