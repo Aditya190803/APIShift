@@ -1,3 +1,5 @@
 requests
 google-generativeai
 groq
+faiss-cpu
+sentence-transformers

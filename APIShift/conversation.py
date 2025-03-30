@@ -1,6 +1,8 @@
 from typing import List, Dict, Any, Union
 from .exceptions import RateLimitError, QuotaExceededError, NoAvailableProvidersError
 from .providers import LLMProvider, GeminiProvider, OpenRouterProvider, GroqProvider
+import faiss
+from sentence_transformers import SentenceTransformer
 
 class Conversation:
     """
@@ -25,6 +27,15 @@ class Conversation:
         self.max_history_length = max_history_length
         self.history: List[Dict[str, str]] = []
         self.current_provider_index = 0
+        self._initialize_faiss()
+    
+    def _initialize_faiss(self):
+        """
+        Initialize the FAISS index.
+        """
+        self.faiss_index = faiss.IndexFlatL2(768)  # Assuming 768-dimensional embeddings
+        self.faiss_data = []
+        self.model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
     
     def add_provider(self, provider: LLMProvider):
         """
@@ -66,6 +77,27 @@ class Conversation:
         # Move to next provider
         self.current_provider_index = (self.current_provider_index + 1) % len(self.providers)
     
+    def add_to_faiss(self, message: str):
+        """
+        Add a message to the FAISS index.
+        
+        :param message: Message to add
+        """
+        # Convert message to embedding
+        embedding = self._convert_to_embedding(message)
+        self.faiss_index.add(embedding)
+        self.faiss_data.append(message)
+    
+    def _convert_to_embedding(self, message: str):
+        """
+        Convert a message to an embedding.
+        
+        :param message: Message to convert
+        :return: Embedding vector
+        """
+        # Use sentence-transformers model for embedding
+        return self.model.encode([message]).astype('float32')
+    
     def send_message(
         self, 
         message: str, 
@@ -86,6 +118,9 @@ class Conversation:
         # Trim history if exceeding max length
         if len(self.history) > self.max_history_length:
             self.history = self.history[-self.max_history_length:]
+        
+        # Add message to FAISS index
+        self.add_to_faiss(message)
         
         # Attempt to get response, with provider switching
         attempts = 0
