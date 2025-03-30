@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "APIShift"
-version = "1.0.0"
-description = "A module that enables seamless interaction with multiple free-tier language model (LLM) providers."
+version = "1.0.1"
+description = "A package for managing multiple LLM providers with automatic key shifting to bypass rate limits and quotas while maintaining conversation context."
 readme = "README.md"
 requires-python = ">=3.11"
 license = {file = "LICENSE"}  # Or specify a license string, e.g., "MIT"
