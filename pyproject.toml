@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "APIShift"
+version = "1.0.0"
+description = "A module that enables seamless interaction with multiple free-tier language model (LLM) providers."
+readme = "README.md"
+requires-python = ">=3.11"
+license = {file = "LICENSE"}  # Or specify a license string, e.g., "MIT"
+authors = [
+    { name="Aditya190803", email="aditya.mer@somaiya.edu" }
+]
+dependencies = [
+    "groq",
+    "google-generativeai",
+    "requests",
+    "faiss-cpu",
+    "sentence-transformers"
+]
+
+[project.urls]
+Homepage = "https://github.com/Aditya190803/APIShift"
+Repository = "https://github.com/Aditya190803/APIShift"
+
+
