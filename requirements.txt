@@ -3,3 +3,5 @@ google-generativeai
 groq
 faiss-cpu
 sentence-transformers
+httpx
+typing-extensions

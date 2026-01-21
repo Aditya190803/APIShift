@@ -17,7 +17,9 @@ dependencies = [
     "google-generativeai",
     "requests",
     "faiss-cpu",
-    "sentence-transformers"
+    "sentence-transformers",
+    "httpx",
+    "typing-extensions"
 ]
 
 [project.urls]
