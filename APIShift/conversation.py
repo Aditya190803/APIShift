@@ -1,4 +1,4 @@
-from typing import List, Dict, Any, Union
+from typing import List, Dict, Any, Union, Iterator, Optional
 from .exceptions import RateLimitError, QuotaExceededError, NoAvailableProvidersError
 from .providers import LLMProvider, GeminiProvider, OpenRouterProvider, GroqProvider
 
@@ -20,7 +20,9 @@ class Conversation:
     """
 
     def __init__(
-        self, providers: List[LLMProvider] = None, max_history_length: int = 20
+        self,
+        providers: Optional[List[LLMProvider]] = None,
+        max_history_length: int = 20,
     ):
         """
         Initialize the conversation.
@@ -156,6 +158,90 @@ class Conversation:
 
             except (RateLimitError, QuotaExceededError):
                 # Switch provider on rate limit or quota error
+                self._switch_provider()
+                attempts += 1
+
+        # If all providers fail
+        raise NoAvailableProvidersError()
+
+    def send_message_stream(self, message: str, **kwargs) -> Iterator[str]:
+        """
+        Send a message and get a streaming response.
+
+        :param message: User message to send
+        :param kwargs: Additional arguments for generation
+        :return: Iterator yielding response chunks
+        :raises NoAvailableProvidersError: If no providers are available
+        """
+        # Add user message to history
+        user_message = {"role": "user", "content": message}
+        self.history.append(user_message)
+
+        # Trim history if exceeding max length
+        if len(self.history) > self.max_history_length:
+            self.history = self.history[-self.max_history_length :]
+
+        # Add message to FAISS index
+        self.add_to_faiss(message)
+
+        # Attempt to get response, with provider switching
+        attempts = 0
+        max_attempts = len(self.providers) * 2
+
+        while attempts < max_attempts:
+            full_content = []
+            try:
+                # Get current provider
+                current_provider = self._get_current_provider()
+
+                # Generate streaming response
+                stream = current_provider.generate_stream(
+                    messages=self.history, **kwargs
+                )
+
+                try:
+                    # Peek at the first chunk to ensure the stream starts successfully
+                    # If this fails, it'll trigger the except block and we can failover
+                    iterator = iter(stream)
+                    try:
+                        first_chunk = next(iterator)
+                    except StopIteration:
+                        # Empty stream is treated as success with empty response
+                        assistant_response = {
+                            "role": "assistant",
+                            "content": "",
+                        }
+                        self.history.append(assistant_response)
+                        return
+
+                    yield first_chunk
+                    full_content.append(first_chunk)
+
+                    while True:
+                        try:
+                            chunk = next(iterator)
+                            yield chunk
+                            full_content.append(chunk)
+                        except StopIteration:
+                            break
+                except (RateLimitError, QuotaExceededError) as e:
+                    # If it fails AFTER yielding some data (meaning full_content is not empty),
+                    # we raise it so it's NOT caught by the outer loop's retry logic.
+                    if full_content:
+                        raise e  # If it's partial, we want the ORIGINAL error to propagate
+                    raise e
+
+                # Add assistant response to history
+                assistant_response = {
+                    "role": "assistant",
+                    "content": "".join(full_content),
+                }
+                self.history.append(assistant_response)
+                return
+
+            except (RateLimitError, QuotaExceededError) as e:
+                if full_content:
+                    raise e
                 self._switch_provider()
                 attempts += 1
 
