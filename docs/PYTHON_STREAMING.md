@@ -1,49 +1,107 @@
 # Python Streaming Guide
 
-APIShift provides a robust way to handle streaming responses from LLMs with built-in auto-failover and key rotation.
+APIShift streams LLM responses while prioritizing same-provider API key pools. If one key hits a rate limit or quota window before output begins, APIShift cools down that key and retries another key in the same provider pool before falling back to another provider.
 
-## Basic Streaming
-
-The `send_message_stream` method returns an iterator that yields string chunks as they arrive from the provider.
+## Basic Streaming with a Key Pool
 
 ```python
-from APIShift import Conversation, OpenRouterProvider
+from APIShift import Conversation
 
-conversation = Conversation([
-    OpenRouterProvider(['your_api_key'])
-])
+conversation = Conversation.from_gemini_key_pool(
+    api_keys=["gemini_key_1", "gemini_key_2", "gemini_key_3"],
+    key_strategy="adaptive",
+    memory_path=".apishift/memory.jsonl",
+)
 
-# Use the stream
 for chunk in conversation.send_message_stream("Tell me a story."):
     print(chunk, end="", flush=True)
 ```
 
-## How Auto-Failover Works in Streaming
+## How Streaming Failover Works
 
-Streaming failover is trickier than standard requests because data might already have been sent to the user before an error occurs. APIShift handles this using a "Peeking" strategy:
+Streaming failover is trickier than normal requests because data might already have been sent to the user. APIShift uses a peeking strategy:
 
-1.  **Start Request**: APIShift initiates the stream with the current provider.
-2.  **Initial Validation**: It attempts to retrieve the *first chunk* from the stream.
-3.  **Failover Catch**: If the first chunk retrieval fails (due to Rate Limit, Quota, or Connection issues), APIShift catches the exception, switches to the next provider/key, and restarts the process.
-4.  **Data Flow**: Once the first chunk is successfully retrieved, it is yielded to the user. From this point on, if the stream breaks, the error is raised to the application (since partial data has already been consumed).
+1. **Choose a key from the current provider pool**: default `adaptive` routing picks a healthy, least-used key.
+2. **Start the stream**: APIShift sends the compiled conversation context to that key.
+3. **Peek the first chunk**: if the key fails before output starts, APIShift cools down that key using retry headers when available.
+4. **Retry same provider first**: another healthy key in the same provider pool is tried before any provider fallback.
+5. **Yield data**: once the first chunk is yielded, APIShift will not silently restart on another key, because that could duplicate or garble output.
 
-## Example: Failover across Multiple Keys
+## Same Provider First, Fallback Provider Second
 
 ```python
-from APIShift import Conversation, GeminiProvider
+from APIShift import Conversation, GeminiProvider, OpenRouterProvider
 
-# If key_1 hits a rate limit, APIShift will automatically 
-# try key_2 before yielding any data to the user.
-conversation = Conversation([
-    GeminiProvider(['key_1', 'key_2'])
-])
+conversation = Conversation(
+    [
+        GeminiProvider(["gemini_key_1", "gemini_key_2", "gemini_key_3"]),
+        OpenRouterProvider(["openrouter_key_1"]),
+    ],
+    key_strategy="adaptive",
+    system_prompt="Continue the same task even if APIShift changes keys/providers.",
+)
 
-try:
-    for chunk in conversation.send_message_stream("Write a long essay."):
-        print(chunk, end="")
-except Exception as e:
-    print(f"\nStream interrupted: {e}")
+for chunk in conversation.send_message_stream("Write a long essay."):
+    print(chunk, end="")
 ```
+
+In this example, OpenRouter is only attempted after the Gemini key pool has no currently available keys.
+
+## Key Strategies
+
+- `adaptive` (default): prefer the least-used healthy key and skip cooling-down keys.
+- `round_robin`: advance to the next healthy key after each successful request.
+- `sticky`: keep using the current key until it is unavailable.
+
+```python
+conversation = Conversation(
+    [GeminiProvider(["key_1", "key_2"])],
+    key_strategy="round_robin",
+)
+```
+
+## Context Preservation Across Key and Provider Shifts
+
+APIShift keeps a canonical history in `Conversation.history`. Before each provider call it compiles:
+
+- the optional `system_prompt`
+- a compact summary of trimmed older messages
+- recent conversation messages
+- optional FAISS-retrieved remembered snippets
+
+That compiled message list is sent to every key/provider attempted for the same user request, so a retry continues the same task.
+
+```python
+conversation = Conversation(
+    [GeminiProvider(["key_1", "key_2"]), OpenRouterProvider(["key_3"])],
+    system_prompt="You are continuing the same coding task across key shifts.",
+    max_history_length=20,
+)
+```
+
+## Inspect Routing
+
+```python
+response = conversation.send_message("Continue")
+print(conversation.last_route)
+```
+
+Example:
+
+```python
+{
+    "provider": "GeminiProvider",
+    "model": "gemini-1.5-flash",
+    "key_index": 1,
+    "key_label": "key-2",
+    "available_keys": 2,
+    "total_keys": 3,
+    "key_strategy": "adaptive",
+    "attempts": 2,
+}
+```
+
+Raw API keys are never exposed in telemetry.
 
 ## Advanced: Combining with RAG (FAISS)
 
@@ -52,7 +110,6 @@ Even when streaming, APIShift automatically indexes your messages in FAISS if th
 ```python
 conversation.add_to_faiss("The secret password is 'Swordfish'")
 
-# The orchestrator can use this context in future calls
 for chunk in conversation.send_message_stream("What is the secret password?"):
     print(chunk, end="")
 ```
@@ -65,6 +122,6 @@ You can pass standard generation parameters to the stream:
 stream = conversation.send_message_stream(
     "Hello",
     temperature=0.7,
-    max_tokens=500
+    max_tokens=500,
 )
 ```

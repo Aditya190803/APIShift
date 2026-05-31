@@ -1,35 +1,67 @@
-name: Publish APIShift Package
+name: Publish APIShift Packages
 
 on:
   push:
-    branches:
-      - main
     tags:
       - 'v*'
 
 jobs:
-  build-and-publish:
+  publish-pypi:
+    name: Publish to PyPI
     runs-on: ubuntu-latest
-
+    environment:
+      name: pypi
+      url: https://pypi.org/project/APIShift/
+    permissions:
+      id-token: write  # For trusted publishing
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.x'
 
       - name: Install build tools
         run: |
           python -m pip install --upgrade pip
-          pip install build twine
+          pip install build
 
       - name: Build package
         run: python -m build --sdist --wheel .
 
-      - name: Publish package to PyPI
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+
+  publish-npm:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    environment:
+      name: npm
+      url: https://www.npmjs.com/package/@apishift/core
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        working-directory: ./js
+        run: npm ci
+
+      - name: Build package
+        working-directory: ./js
+        run: npm run build
+
+      - name: Publish to npm
+        working-directory: ./js
+        run: npm publish --access public
         env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-        run: twine upload dist/*
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
