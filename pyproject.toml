@@ -4,13 +4,25 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "APIShift"
-version = "1.0.1"
-description = "A package for managing multiple LLM providers with automatic key shifting to bypass rate limits and quotas while maintaining conversation context."
+version = "1.1.0"
+description = "Same-provider LLM API key pooling with adaptive key rotation and optional cross-provider fallback."
 readme = "README.md"
 requires-python = ">=3.11"
-license = {file = "LICENSE"}  # Or specify a license string, e.g., "MIT"
+license = "MIT"
 authors = [
     { name="Aditya190803", email="aditya.mer@somaiya.edu" }
+]
+keywords = ["llm", "api-keys", "key-pool", "orchestration", "failover", "openrouter", "gemini", "groq", "ai", "streaming"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 dependencies = [
     "groq",
@@ -25,5 +37,17 @@ dependencies = [
 [project.urls]
 Homepage = "https://github.com/Aditya190803/APIShift"
 Repository = "https://github.com/Aditya190803/APIShift"
+
+[tool.setuptools]
+packages = ["APIShift"]
+
+[tool.setuptools.exclude-package-data]
+"*" = ["js/*", "site/*", "tests/*", "docs/*", ".github/*"]
+
+[tool.pytest.ini_options]
+markers = [
+    "live: tests that call real provider APIs and require API keys",
+]
+
 
 

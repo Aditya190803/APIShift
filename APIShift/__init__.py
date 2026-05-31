@@ -1,10 +1,14 @@
-# Multi-LLM Manager Package
+# APIShift: same-provider key-pool orchestration with optional provider fallback.
+from .context import approximate_token_count, pack_messages_to_token_budget
 from .conversation import Conversation
+from .memory import JsonMemoryStore
 from .providers import (
-    LLMProvider, 
-    GeminiProvider, 
-    OpenRouterProvider, 
-    GroqProvider
+    LLMProvider,
+    GeminiProvider,
+    OpenRouterProvider,
+    GroqProvider,
+    FREE_OPENROUTER_MODELS,
+    discover_openrouter_free_models,
 )
 from .exceptions import (
     MultiLLMManagerError,
@@ -14,7 +18,7 @@ from .exceptions import (
     ProviderInitializationError
 )
 
-__version__ = "0.1.0"
+__version__ = "1.2.0"
 
 __all__ = [
     # Main classes
@@ -23,7 +27,12 @@ __all__ = [
     'GeminiProvider',
     'OpenRouterProvider',
     'GroqProvider',
-    
+    'FREE_OPENROUTER_MODELS',
+    'discover_openrouter_free_models',
+    'JsonMemoryStore',
+    'approximate_token_count',
+    'pack_messages_to_token_budget',
+
     # Exceptions
     'MultiLLMManagerError',
     'RateLimitError',

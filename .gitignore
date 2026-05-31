@@ -91,7 +91,9 @@ ENV/
 .ropeproject
 
 # mkdocs documentation
-/site
+site/.next
+site/node_modules
+site/out
 
 # mypy
 .mypy_cache/
