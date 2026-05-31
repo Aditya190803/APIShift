@@ -1,27 +1,40 @@
 {
   "name": "@apishift/core",
-  "version": "0.1.0",
-  "description": "Core TypeScript library for APIShift",
+  "version": "1.1.0",
+  "description": "Same-provider LLM API key pooling with adaptive rotation and optional Vercel AI SDK fallback",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "files": [
     "dist"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Aditya190803/APIShift.git",
+    "directory": "js"
+  },
+  "bugs": {
+    "url": "https://github.com/Aditya190803/APIShift/issues"
+  },
+  "homepage": "https://github.com/Aditya190803/APIShift#readme",
   "scripts": {
     "build": "tsup src/index.ts --format cjs,esm --dts",
     "dev": "tsup src/index.ts --format cjs,esm --watch --dts",
-    "lint": "tsc"
+    "lint": "tsc",
+    "test:live": "bun run build && bun test/live-openrouter.mjs"
   },
   "dependencies": {
-    "ai": "^4.1.12",
-    "@ai-sdk/google": "^1.1.2",
-    "@ai-sdk/openai": "^1.1.2",
-    "zod": "^3.24.1"
+    "@ai-sdk/google": "^3.0.80",
+    "@ai-sdk/openai": "^3.0.67",
+    "ai": "^6.0.193",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
-    "typescript": "^5.7.3",
-    "tsup": "^8.3.5",
-    "@types/node": "^22.10.7"
+    "@types/node": "^25.9.1",
+    "tsup": "^8.5.1",
+    "typescript": "^6.0.3"
   }
 }
