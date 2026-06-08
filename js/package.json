@@ -1,6 +1,6 @@
 {
   "name": "@apishift/core",
-  "version": "1.1.0",
+  "version": "0.1.0",
   "description": "Same-provider LLM API key pooling with adaptive rotation and optional Vercel AI SDK fallback",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

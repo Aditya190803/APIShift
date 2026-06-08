@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "APIShift"
-version = "1.1.0"
+version = "0.1.0"
 description = "Same-provider LLM API key pooling with adaptive key rotation and optional cross-provider fallback."
 readme = "README.md"
 requires-python = ">=3.11"
