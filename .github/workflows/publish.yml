@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 jobs:
   publish-pypi:
@@ -13,7 +14,8 @@ jobs:
       name: pypi
       url: https://pypi.org/project/APIShift/
     permissions:
-      id-token: write  # For trusted publishing
+      id-token: write  # For PyPI trusted publishing
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -21,7 +23,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
+          python-version: '3.11'
 
       - name: Install build tools
         run: |
@@ -46,6 +48,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -54,11 +61,11 @@ jobs:
 
       - name: Install dependencies
         working-directory: ./js
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Build package
         working-directory: ./js
-        run: npm run build
+        run: bun run build
 
       - name: Publish to npm
         working-directory: ./js
